@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · Log out in Account';
+const APP_VERSION='20 Oct 2026 · Update box fits phone';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -503,7 +503,7 @@ const Upd={info:null,shown:false,
     try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(err){}
     try{await Promise.all(['app.js','index.html','config.js','local-db.js'].map(f=>fetch(f+'?r='+Date.now(),{cache:'reload'}).catch(()=>{})));await Promise.all(['app.js','index.html'].map(f=>fetch(f,{cache:'reload'}).catch(()=>{})))}catch(err){}
     location.reload()},
-  notes(){const n=(Upd.info&&Upd.info.notes)||[];return n.length?'<ul>'+n.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''},
+  notes(){const n=((Upd.info&&Upd.info.notes)||[]).slice(0,6);return n.length?'<ul>'+n.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''},
   bar(){if(Upd.shown)return;Upd.shown=true;const d=document.createElement('div');d.className='updbar';d.setAttribute('role','status');
     d.innerHTML=`<div class="updtxt"><b>A new version of the app is ready</b><span>${esc(Upd.info.date||'')} – your work is saved automatically. Just tap Update now.</span></div>
       <button class="btn small" data-upd="notes">What's new</button><button class="btn small primary" data-upd="go">Update now</button><button class="btn small" data-upd="later" aria-label="Later">Later</button><div class="updnotes" hidden>${Upd.notes()}</div>`;
