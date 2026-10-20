@@ -1,7 +1,8 @@
 {
- "version": "17 Oct 2026 · access control, app colour",
- "date": "17 Oct 2026",
+ "version": "20 Oct 2026 · open prescription as file",
+ "date": "20 Oct 2026",
  "notes": [
+  "Prescriptions: new “Open file” button next to Print and Save PDF (also “Save & open file”, in the pharmacy list and for treatment records), so you can open the PDF as a file.",
   "Appointments now open first after you log in.",
   "Smart Help: tap the Help button, type what you need (for example “holiday”) and it shows where it is and takes you there.",
   "Hospitals: choose Dental hospital to use departments. Every patient can have a department, and the list can be filtered.",

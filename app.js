@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='17 Oct 2026 · access control, app colour';
+const APP_VERSION='20 Oct 2026 · open prescription as file';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -224,10 +224,10 @@ function applyBranding(){
   if(bg==='photo'&&branding.bgImage)root.style.setProperty('--bgimg',`url("${branding.bgImage}")`);else root.style.removeProperty('--bgimg');
   const th=/^#[0-9a-f]{6}$/i.test(branding.theme||'')?branding.theme:'';
   const names=['--accent','--accent-soft','--side','--side-2','--side-on'];
-  if(th){root.style.setProperty('--accent',th);root.style.setProperty('--accent-soft','color-mix(in srgb,'+th+' 16%,var(--paper))');root.style.setProperty('--side','color-mix(in srgb,'+th+' 52%,#000)');root.style.setProperty('--side-2','color-mix(in srgb,'+th+' 36%,#000)');root.style.setProperty('--side-on','color-mix(in srgb,'+th+' 68%,#000)')}
+  if(th){root.style.setProperty('--accent',th);root.style.setProperty('--accent-soft','color-mix(in srgb,'+th+' 16%,var(--paper))');root.style.setProperty('--side','color-mix(in srgb,'+th+' 42%,#000)');root.style.setProperty('--side-2','color-mix(in srgb,'+th+' 30%,#000)');root.style.setProperty('--side-on','color-mix(in srgb,'+th+' 70%,#000)')}
   else names.forEach(n=>root.style.removeProperty(n));
 }
-const THEMES=[['','Teal (original)','#1f5f6b'],['#2b5fa8','Blue','#2b5fa8'],['#5b4aa8','Purple','#5b4aa8'],['#2e7d4f','Green','#2e7d4f'],['#b0446b','Rose','#b0446b'],['#b8651b','Orange','#b8651b'],['#44505a','Slate','#44505a'],['custom','My own colour','']];
+const THEMES=[['','Original teal','#1f5f6b'],['#2b5fa8','Blue','#2b5fa8'],['#5b4aa8','Purple','#5b4aa8'],['#2e7d4f','Green','#2e7d4f'],['#b0446b','Rose','#b0446b'],['#b8651b','Orange','#b8651b'],['#44505a','Slate','#44505a'],['custom','My own colour','']];
 async function saveBranding(patch){
   const data=Object.assign({},branding,patch);
   if(brandingId){const {error}=await sb.from('finance').update({data}).eq('id',brandingId);if(error)throw error}
@@ -294,7 +294,7 @@ function pharmView(){
     <ul style="margin:0;padding-left:18px">${r.items.map(it=>`<li><b>${esc(it.name)}</b>${it.dose?' – '+esc(it.dose):''}${it.days?' · '+esc(it.days)+(/^\d+$/.test(String(it.days).trim())?' days':''):''}${it.note?' · '+esc(it.note):''}</li>`).join('')}</ul>
     ${r.advice?`<div class="small">${esc(r.advice)}</div>`:''}
     ${penAllergy(p)?'<div class="msg err" style="margin:0">Penicillin allergy – check before giving.</div>':''}
-    <div class="row"><button class="btn small primary" data-rxgiven="${p.id}|${r.id}">✓ Mark as given</button>${pharmOnly()?`<button class="btn small" data-pxprint="${p.id}|${r.id}">Print</button>`:`<button class="btn small" data-pxprint="${p.id}|${r.id}">Print</button><button class="btn small" data-open="${p.id}">Open patient</button>`}</div></div>`).join(''):'<div class="empty">No prescriptions waiting.</div>'}
+    <div class="row"><button class="btn small primary" data-rxgiven="${p.id}|${r.id}">✓ Mark as given</button>${pharmOnly()?`<button class="btn small" data-pxprint="${p.id}|${r.id}">Print</button><button class="btn small" data-pxopen="${p.id}|${r.id}">Open file</button>`:`<button class="btn small" data-pxprint="${p.id}|${r.id}">Print</button><button class="btn small" data-pxopen="${p.id}|${r.id}">Open file</button><button class="btn small" data-open="${p.id}">Open patient</button>`}</div></div>`).join(''):'<div class="empty">No prescriptions waiting.</div>'}
   </section>
   ${g.length?`<section class="panel"><h3>Recently given</h3><div class="plist">${g.map(({p,r})=>`<div class="member"><span style="flex:1;min-width:0"><b>${pName(p)}</b><br><span class="small muted">${r.items.map(i=>esc(i.name)).join(', ')} · given ${fmtDate(dayOf(r.pharm.at))} by ${esc(r.pharm.by||'')}</span></span></div>`).join('')}</div></section>`:''}`;
 }
@@ -749,6 +749,7 @@ function printPdfUrl(url){return new Promise(res=>{
   setTimeout(()=>{if(!done)fallback()},6000);
   setTimeout(()=>{try{f.remove()}catch(e){}},10*60*1000)})}
 function deliverFile(blob,filename,mode){
+  if(mode==='open'){const u=URL.createObjectURL(blob);setTimeout(()=>URL.revokeObjectURL(u),300000);const w=window.open(u,'_blank');if(w)return Promise.resolve(true);const a=document.createElement('a');a.href=u;a.target='_blank';a.rel='noopener';document.body.appendChild(a);a.click();a.remove();return Promise.resolve(true)}
   const touch=window.matchMedia&&matchMedia('(pointer:coarse)').matches;
   let file=null;try{file=new File([blob],filename,{type:blob.type})}catch(e){}
   if(touch&&file&&navigator.canShare&&navigator.canShare({files:[file]}))
@@ -764,7 +765,7 @@ async function printRecord(p,date,mode){
   if(!has){toast('Nothing recorded on '+fmtDate(date));return}
   const fn=('Treatment_Record_'+p.last+'_'+p.first+'_'+date+'.pdf').replace(/[^\w.\-]+/g,'_');
   let blob;try{blob=buildRecord(p,date)}catch(e){toast('Could not create the record');return}
-  deliverFile(blob,fn,mode).then(ok=>{if(ok)toast(mode==='print'?'Choose Print to print the record':'Record saved')},()=>toast('Could not share the file'));
+  deliverFile(blob,fn,mode).then(ok=>{if(ok)toast(mode==='print'?'Choose Print to print the record':mode==='open'?'Record opened':'Record saved')},()=>toast('Could not share the file'));
 }
 
 /* ---------- old records: import a patient list (CSV or Excel) ---------- */
@@ -2185,13 +2186,13 @@ function settingsView(){
   <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button>${syncBadge()}</header>
   <h1>Clinic & account</h1>
   <p class="small muted" style="margin:-6px 0 12px">App version: <b>${APP_VERSION}</b></p>
-  ${brandingPanel()}
-  ${ownerCodesPanel()}
-  ${deptPanel()}
-  ${bookingSettingsPanel()}
-  ${soundsPanel()}
   ${msgHtml()}
-  ${activationPanel(admin)}
+${brandingPanel()}
+${soundsPanel()}
+${deptPanel()}
+${bookingSettingsPanel()}
+${ownerCodesPanel()}
+${activationPanel(admin)}
   <form class="panel" id="clinicForm">
     <h3>Clinic details</h3>
     <label class="f"><span>Clinic name</span><input type="text" id="cl-name" value="${esc(clinic.name)}" ${admin?'':'readonly'} required></label>
@@ -3049,12 +3050,12 @@ function rxTab(p){
       <div class="row"><button type="button" class="btn small" data-act="rxBlank">+ Add own medicine</button></div></div>
     <label class="f"><span>Advice for the patient</span><textarea id="rx-advice" rows="3">${esc(d.advice||'')}</textarea></label>
     <p class="small muted" style="margin:0">Ready doses are common adult doses – check them for each patient (age, weight, pregnancy, kidney/liver disease, other medicines) and change them if needed.</p>
-    <div class="row"><button class="btn primary" data-act="rxSave">Save prescription</button><button class="btn" data-act="rxSavePrint">${icon('doc')} Save & print</button></div>
+    <div class="row"><button class="btn primary" data-act="rxSave">Save prescription</button><button class="btn" data-act="rxSavePrint">${icon('doc')} Save & print</button><button class="btn" data-act="rxSaveOpen">Save & open file</button></div>
   </section>`}
   <section class="panel"><h2>Prescriptions</h2>
     ${list.length?list.map(r=>`<div class="rxsaved"><div class="row"><b>${fmtDate(r.date)}</b>${r.diag?`<span class="small muted">${esc(r.diag)}</span>`:''}<span class="spacer"></span><span class="small muted">${esc(r.by||'')}</span></div>
       <ol>${r.items.map(it=>`<li><b>${esc(it.name)}</b> – ${esc(it.dose)}${it.days?' – '+esc(it.days)+' days':''}${it.note?` <span class="muted">(${esc(it.note)})</span>`:''}</li>`).join('')}</ol>
-      <div class="row"><button class="btn small primary" data-rxprint="${r.id}">${icon('doc')} Print</button><button class="btn small" data-rxsavepdf="${r.id}">Save PDF</button>${ro?'':`<button class="btn small" data-rxedit="${r.id}">Edit</button><button class="btn small" data-rxcopy="${r.id}">Copy as new</button><button class="btn small danger" data-rxremove="${r.id}">Delete</button>`}</div></div>`).join(''):'<div class="empty">No prescriptions yet.</div>'}
+      <div class="row"><button class="btn small primary" data-rxprint="${r.id}">${icon('doc')} Print</button><button class="btn small" data-rxsavepdf="${r.id}">Save PDF</button><button class="btn small" data-rxopen="${r.id}">Open file</button>${ro?'':`<button class="btn small" data-rxedit="${r.id}">Edit</button><button class="btn small" data-rxcopy="${r.id}">Copy as new</button><button class="btn small danger" data-rxremove="${r.id}">Delete</button>`}</div></div>`).join(''):'<div class="empty">No prescriptions yet.</div>'}
   </section>`;
 }
 function rxRead(){const d=view.rxDraft;if(!d)return;const g=k=>{const e=$('#rx-'+k);return e?e.value:undefined};
@@ -3096,7 +3097,7 @@ function notesTab(p){
     <h2>Print visit record</h2>
     ${balToggle()}
     <p class="small muted" style="margin:0">A PDF of the treatment done that day, clinical notes, medical alerts, chart findings and what is still planned, with signature lines. On a phone, choose Print or Save to Files in the share sheet. On a computer, Print opens the PDF and Save PDF downloads it.</p>
-    <div class="row"><input type="date" id="pr-date" value="${today()}" style="max-width:180px"><button class="btn primary" data-act="printRecord">Print record</button><button class="btn" data-act="saveRecord">Save PDF</button></div>
+    <div class="row"><input type="date" id="pr-date" value="${today()}" style="max-width:180px"><button class="btn primary" data-act="printRecord">Print record</button><button class="btn" data-act="saveRecord">Save PDF</button><button class="btn" data-act="openRecord">Open file</button></div>
   </section>
   <section class="panel">
     <h2>New clinical note</h2>
@@ -3315,7 +3316,7 @@ document.addEventListener('click',async e=>{
     save();render();return}
   const b=e.target.closest('button');if(!b)return;
   const p=P(),d=b.dataset;
-  if(d.pxprint){const [pid,rid]=d.pxprint.split('|');const pp=db.patients.find(x=>x.id===pid);const rr=pp&&(pp.rx||[]).find(x=>x.id===rid);if(rr){try{await rxPdf(pp,rr,'print')}catch(err){toast(friendly(err))}}return}
+  if(d.pxprint||d.pxopen){const [pid,rid]=(d.pxprint||d.pxopen).split('|');const pp=db.patients.find(x=>x.id===pid);const rr=pp&&(pp.rx||[]).find(x=>x.id===rid);if(rr){try{await rxPdf(pp,rr,d.pxprint?'print':'open')}catch(err){toast(friendly(err))}}return}
   if(pharmOnly()&&(d.open||d.home==='list'||d.home==='aes'||d.home==='appts'||d.home==='earn')){view.screen='pharm';render();return}
   if(d.pinkey){const i=$('#earn-pin')||$('#own-code');if(i){i.value=d.pinkey==='del'?i.value.slice(0,-1):(i.value+d.pinkey).slice(0,i.maxLength>0?i.maxLength:6);i.focus()}return}
   if(d.earnper){earn.period=d.earnper;render();return}
@@ -3475,7 +3476,7 @@ document.addEventListener('click',async e=>{
     if(m.ceph&&penAllergy(p)&&!confirm('Penicillin allergy: cephalosporins can cause a reaction in some patients. Add anyway?'))return;
     view.rxDraft.items.push({name:m.name,dose:m.dose,days:m.days,note:m.note});render();toast('Added – you can change the dose below');return}
   if(d.rxdel!==undefined){rxRead();view.rxDraft.items.splice(+d.rxdel,1);render();return}
-  if(d.rxprint||d.rxsavepdf){const r=(p.rx||[]).find(x=>x.id===(d.rxprint||d.rxsavepdf));if(r){try{await rxPdf(p,r,d.rxprint?'print':'save')}catch(err){toast(friendly(err))}}return}
+  if(d.rxprint||d.rxsavepdf||d.rxopen){const r=(p.rx||[]).find(x=>x.id===(d.rxprint||d.rxsavepdf||d.rxopen));if(r){try{await rxPdf(p,r,d.rxprint?'print':d.rxopen?'open':'save')}catch(err){toast(friendly(err))}}return}
   if(d.rxedit){const r=p.rx.find(x=>x.id===d.rxedit);view.rxDraft=Object.assign(JSON.parse(JSON.stringify(r)),{pid:p.id});render();window.scrollTo(0,0);return}
   if(d.rxcopy){const r=p.rx.find(x=>x.id===d.rxcopy);view.rxDraft=Object.assign(JSON.parse(JSON.stringify(r)),{id:'',date:today(),pid:p.id});render();window.scrollTo(0,0);toast('Copied – change it and save');return}
   if(d.rxremove){if(!confirm('Delete this prescription?'))return;p.rx=p.rx.filter(x=>x.id!==d.rxremove);save();render();toast('Prescription deleted');return}
@@ -3487,7 +3488,7 @@ document.addEventListener('click',async e=>{
       $('#n-title').value='Treatment';toast('Inserted – check the note and tap Save note');tx.scrollIntoView({block:'center'});break}
     case 'rxBlank':{rxRead();view.rxDraft.items.push({name:'',dose:'',days:'',note:''});render();const ins=document.querySelectorAll('[data-rxf][data-k=name]');if(ins.length)ins[ins.length-1].focus();break}
     case 'rxCancel':{view.rxDraft=rxNew();render();break}
-    case 'rxSave':case 'rxSavePrint':{const r=rxSave(p);if(!r)break;render();toast('Prescription saved');if(d.act==='rxSavePrint'){try{await rxPdf(p,r,'print')}catch(err){toast(friendly(err))}}break}
+    case 'rxSave':case 'rxSavePrint':case 'rxSaveOpen':{const r=rxSave(p);if(!r)break;render();toast('Prescription saved');if(d.act==='rxSavePrint'||d.act==='rxSaveOpen'){try{await rxPdf(p,r,d.act==='rxSaveOpen'?'open':'print')}catch(err){toast(friendly(err))}}break}
     case 'reload':location.reload();break;
     case 'showRecover':view.email=$('#li-email')?$('#li-email').value:'';view.showRecover=!view.showRecover;view.msg=null;render();break;
     case 'rcDone':if(!$('#rc-ok').checked){toast('Tick the box once you have saved the code');break;}view.recoveryCode=null;clinic.has_recovery=true;view.screen='welcome';render();Sound.play('success');break;
@@ -3577,6 +3578,7 @@ document.addEventListener('click',async e=>{
     case 'clearTooth':{const t=view.tooth;delete p.chart[t];delete p.surf[t];delete p.rct[t];delete p.toothNotes[t];delete p.imp[t];delete p.mob[t];delete p.pros[t];view.confirm=null;save();render();toast('Tooth '+t+' cleared');break;}
     case 'printRecord':printRecord(p,$('#pr-date').value||today(),'print');break;
     case 'saveRecord':printRecord(p,$('#pr-date').value||today(),'save');break;
+    case 'openRecord':printRecord(p,$('#pr-date').value||today(),'open');break;
     case 'printToday':printRecord(p,today(),'print');break;
     case 'saveToday':printRecord(p,today(),'save');break;
     case 'newItem':{const pp=P();view.addItem={tooth:'',surf:'',proc:isAes(pp)?'Aesthetic consultation':PROCS[0],phase:isAes(pp)?2:3,fee:''};render();break;}
