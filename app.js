@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · Visits tab';
+const APP_VERSION='20 Oct 2026 · Earnings & My account roles';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -1106,7 +1106,7 @@ async function refreshAppts(){
   }catch(e){toast(friendly(e))}
   apptsLoading=false;softRender();
 }
-function homeNav(active){return `<nav class="tabs homenav desk-hide" role="tablist">${pharmOnly()?'':`<button class="tab" role="tab" aria-selected="${active==='list'}" data-home="list">Patients</button><button class="tab" role="tab" aria-selected="${active==='aes'}" data-home="aes">Aesthetics</button><button class="tab" role="tab" aria-selected="${active==='appts'}" data-home="appts">Appointments</button>`}${pharmOn()&&(!pharmOnly()||isPS())?`<button class="tab" role="tab" aria-selected="${active==='pharm'}" data-home="pharm">Pharmacy${pharmBadge()?' <i class="rdot"></i>':''}</button>`:''}${labOn()&&(!pharmOnly()||isLS())?`<button class="tab" role="tab" aria-selected="${active==='lab'}" data-home="lab">Lab${labBadge()?' <i class="rdot"></i>':''}</button>`:''}<button class="tab" role="tab" aria-selected="${active==='msgs'}" data-home="msgs">Messages${unreadCount()?' <i class="rdot"></i>':''}</button>${isAdmin()?`<button class="tab" role="tab" aria-selected="${active==='earn'}" data-home="earn">Earnings</button>`:''}</nav>`}
+function homeNav(active){return `<nav class="tabs homenav desk-hide" role="tablist">${pharmOnly()?'':`<button class="tab" role="tab" aria-selected="${active==='list'}" data-home="list">Patients</button><button class="tab" role="tab" aria-selected="${active==='aes'}" data-home="aes">Aesthetics</button><button class="tab" role="tab" aria-selected="${active==='appts'}" data-home="appts">Appointments</button>`}${pharmOn()&&(!pharmOnly()||isPS())?`<button class="tab" role="tab" aria-selected="${active==='pharm'}" data-home="pharm">Pharmacy${pharmBadge()?' <i class="rdot"></i>':''}</button>`:''}${labOn()&&(!pharmOnly()||isLS())?`<button class="tab" role="tab" aria-selected="${active==='lab'}" data-home="lab">Lab${labBadge()?' <i class="rdot"></i>':''}</button>`:''}<button class="tab" role="tab" aria-selected="${active==='msgs'}" data-home="msgs">Messages${unreadCount()?' <i class="rdot"></i>':''}</button>${canEarn()?`<button class="tab" role="tab" aria-selected="${active==='earn'}" data-home="earn">Earnings</button>`:''}</nav>`}
 /* Team messages on this device: "patient arrived" notes and messages between staff. */
 let msgs=[];
 async function loadMessages(){if(!clinic)return;const {data}=await sb.from('messages').select('*').eq('clinic_id',clinic.id).order('created_at');msgs=(data||[]).slice(-300)}
@@ -1136,7 +1136,7 @@ function msgsView(){
   let lastDay='';
   return `
   ${clockMini()}${arriveChooser()}
-  <header class="top"><div style="min-width:0"><h1>Messages</h1><div class="sub">${LOCAL?'Notes between the team on this device':'Notes between the team – they appear on every computer at once'}</div></div><button class="btn small desk-hide" data-act="settings">Clinic & account</button></header>
+  <header class="top"><div style="min-width:0"><h1>Messages</h1><div class="sub">${LOCAL?'Notes between the team on this device':'Notes between the team – they appear on every computer at once'}</div></div><button class="btn small desk-hide" data-act="settings">${isAdmin()?'Clinic & account':'My account'}</button></header>
   ${homeNav('msgs')}
   <section class="panel chat">
     <div class="chat-list" id="chatList">${list.length?list.map(m=>{const d=dayOf(m.created_at);const sep=d!==lastDay?`<div class="chat-day">${d===today()?'Today':longDay(d)}</div>`:'';lastDay=d;
@@ -1298,7 +1298,7 @@ function apptsView(){
   ${clockMini()}${arriveChooser()}
   <header class="top">
     <div style="min-width:0"><h1>${esc(clinic.name)}</h1><div class="sub">${esc(me.name)} ${syncBadge()}</div></div>
-    <button class="btn small desk-hide" data-act="settings">Clinic & account</button>
+    <button class="btn small desk-hide" data-act="settings">${isAdmin()?'Clinic & account':'My account'}</button>
   </header>
   ${homeNav('appts')}
   ${bookingWaitingPanel()}
@@ -1581,7 +1581,8 @@ function fillQR(){
 let earn={pays:null,loading:false,err:'',unlockedAt:0,period:'month',anchor:null,busy:false,mode:'',tries:0,tab:'overview',dentist:'',printWhat:'all',sec:'all'};
 let fin={rows:null};
 const EARN_LOCK_MIN=10;
-const earnOpen=()=>isAdmin()&&earn.unlockedAt&&Date.now()-earn.unlockedAt<EARN_LOCK_MIN*60e3;
+const canEarn=()=>isAdmin()||isAcct();
+const earnOpen=()=>canEarn()&&earn.unlockedAt&&Date.now()-earn.unlockedAt<EARN_LOCK_MIN*60e3;
 const isoD=d=>{const x=new Date(d.getTime()-d.getTimezoneOffset()*6e4);return x.toISOString().slice(0,10)};
 const parseD=s=>{const [y,m,d]=s.split('-').map(Number);return new Date(y,m-1,d)};
 const MONTHS=['Jan','Feb','Mar','Apr','May','Jun','Jul','Aug','Sep','Oct','Nov','Dec'];
@@ -1814,13 +1815,13 @@ async function salarySlip(salId){
 }
 const readExpForm=()=>{const g=id=>{const x=$('#'+id);return x?x.value:''};return {date:g('ex-date'),cat:g('ex-cat'),lab:g('ex-lab'),item:g('ex-item').trim(),pat:g('ex-pat').trim(),amount:g('ex-amt'),note:g('ex-note').trim(),method:(document.querySelector('input[name=ex-method]:checked')||{}).value||'Cash'}};
 function earningsView(){
-  if(!isAdmin())return `${homeNav('earn')}<section class="panel"><h2>Clinic earnings</h2><p class="muted">Only the clinic admin can see earnings.</p></section>`;
+  if(!canEarn())return `${homeNav('earn')}<section class="panel"><h2>Clinic earnings</h2><p class="muted">Only the clinic owner (admin) and the accountant can see earnings.</p></section>`;
   if(!earnOpen())return `${homeNav('earn')}<h1>Earnings</h1>${earnLockView()}`;
   if(!earn.anchor)earn.anchor=today();
   if(earn.pays===null||earn.loading)return `${homeNav('earn')}<h1>Earnings</h1><section class="panel"><p class="muted">${earn.err?esc(earn.err):'Loading…'}</p></section>`;
   const D=earnData();
   const tabs=[['overview','Overview'],['treat','By treatment'],['dentists','Dentists'],['expenses','Expenses'],['staff','Staff & salaries'],['payments','Payments']];
-  const body={overview:earnOverview,treat:D=>treatTable(D.byProc,D.treatVal,D.done.length),dentists:earnDentists,expenses:earnExpenses,staff:earnStaff,payments:earnPayments}[earn.tab]||earnOverview;
+  const body={overview:earnOverview,treat:D=>treatTable(D.byProc,D.treatVal,D.done.length),dentists:earnDentists,expenses:earnExpenses,staff:isAcct()?(D=>'<div class="acro"><p class="small muted" style="margin:0">View only – the owner manages staff and salaries.</p>'+earnStaff(D)+'</div>'):earnStaff,payments:earnPayments}[earn.tab]||earnOverview;
   return `${homeNav('earn')}
   <div class="row" style="gap:10px;flex-wrap:wrap"><h1 style="margin:0">Earnings</h1><span class="spacer"></span>
     <label class="row small" style="gap:6px">Print <select id="earn-print" style="width:auto">${[['all','Whole report'],['summary','Summary only'],['treat','Treatments only'],['dentists','Dentists only'],['expenses','Expenses only'],['salaries','Salaries only'],['payments','Payments received only']].map(([k,l])=>`<option value="${k}" ${earn.printWhat===k?'selected':''}>${l}</option>`).join('')}</select></label>
@@ -1913,7 +1914,7 @@ function earnLockView(){
   if(!has)return `<section class="panel earnlock">
     <div class="lockicon" aria-hidden="true">${icon('lock')}</div>
     <h2>${myPin()?'Change earnings PIN':'Set an earnings PIN'}</h2>
-    <p class="muted">Choose a 4 to 6 digit number. You'll type it each time you open Earnings. Only you, the admin, can open it.</p>
+    <p class="muted">Choose a 4 to 6 digit number. You'll type it each time you open Earnings. Only the owner (admin) and the accountant can open it – each with their own PIN.</p>
     <form id="earnSetPin" style="display:flex;flex-direction:column;gap:10px;width:100%;max-width:320px">
       <label class="f"><span>Your login password (to confirm it's you)</span><input type="password" id="ep-pw" autocomplete="current-password" required></label>
       <label class="f"><span>New PIN (4–6 numbers)</span><input type="password" id="ep-new" inputmode="numeric" pattern="[0-9]{4,6}" maxlength="6" autocomplete="off" required></label>
@@ -1990,8 +1991,8 @@ function shell(content){
       ${pharmOnly()?'':`<button class="${active==='appts'?'on':''}" data-home="appts">${icon('calendar')}<span>Appointments</span>${booking.waiting.length?`<em class="badge" title="Online bookings waiting">${booking.waiting.length}</em>`:''}</button>`}
       ${pharmOn()&&(!pharmOnly()||isPS())?`<button class="${active==='pharm'?'on':''}" data-home="pharm">${icon('pill')}<span>Pharmacy</span>${pharmBadge()?`<em class="badge">${pharmBadge()}</em>`:''}</button>`:''}${labOn()&&(!pharmOnly()||isLS())?`<button class="${active==='lab'?'on':''}" data-home="lab">${icon('flask')}<span>Laboratory</span>${labBadge()?`<em class="badge">${labBadge()}</em>`:''}</button>`:''}
       <button class="${active==='msgs'?'on':''}" data-home="msgs">${icon('chat')}<span>Messages</span>${un?`<em class="badge">${un}</em>`:''}</button>
-      ${isAdmin()?`<button class="${active==='earn'?'on':''}" data-home="earn">${icon('money')}<span>Earnings</span>${earnOpen()?'':`<em class="lockmark" title="PIN protected">${icon('lock')}</em>`}</button>`:''}
-      <button class="${active==='settings'?'on':''}" data-act="settings">${icon('gear')}<span>Clinic &amp; account</span></button>
+      ${canEarn()?`<button class="${active==='earn'?'on':''}" data-home="earn">${icon('money')}<span>Earnings</span>${earnOpen()?'':`<em class="lockmark" title="PIN protected">${icon('lock')}</em>`}</button>`:''}
+      <button class="${active==='settings'?'on':''}" data-act="settings">${icon('gear')}<span>${isAdmin()?'Clinic &amp; account':'My account'}</span></button>
     </nav>
     <div class="side-foot">
       <div class="side-user"><span class="avatar" style="--h:${hueOf(me.name)}">${esc(ini)}</span><span><b>${esc(me.name)}</b><small>${ROLE_LABEL[me.role]||''}${loginAt?' · since '+hm(loginAt):''}</small></span></div>
@@ -2144,7 +2145,7 @@ function listView(sec){
   ${clockMini()}
   <header class="top">
     <div style="min-width:0"><h1>${AES?'Aesthetics':esc(clinic.name)}</h1><div class="sub">${AES?esc(clinic.name)+' · ':''}${pool.length} ${AES?'aesthetic ':''}patient${pool.length===1?'':'s'} · ${esc(me.name)} ${syncBadge()}${clinic.lic&&clinic.lic.state==='trial'?`<span class="pill warn">Trial · ${clinic.lic.daysLeft} day${clinic.lic.daysLeft>1?'s':''} left</span>`:''}</div></div>
-    <button class="btn small desk-hide" data-act="settings">Clinic & account</button>
+    <button class="btn small desk-hide" data-act="settings">${isAdmin()?'Clinic & account':'My account'}</button>
   </header>
   ${homeNav(AES?'aes':'list')}
   ${deviceBanner()}
@@ -2182,8 +2183,42 @@ function aboutPanel(){
       <p style="margin:0" class="muted">FDI tooth numbering, BPE codes and dental terms are public clinical standards. All drawings in the app were made for this app.</p>
     </div></details></section>`;
 }
+function acctPanelsHtml(){
+  return `
+  <form class="panel" id="meForm">
+    <h3>Your account</h3>
+    <p class="small muted" style="margin:0">Logged in as ${LOCAL?'username ':''}${esc(user.email)}</p>
+    <div class="grid2"><label class="f"><span>Your name on records in this clinic</span><input type="text" id="me-name" value="${esc(me.name)}" required></label>
+    <label class="f"><span>PMDC registration no.</span><input type="text" id="me-pmdc" value="${esc(me.pmdc||'')}" placeholder="e.g. 12345-D"></label></div>
+    <div class="row"><button class="btn" type="submit">Save my details</button></div>
+  </form>
+  <form class="panel" id="pwForm">
+    <h3>Change password</h3>
+    <label class="f"><span>New password (at least 8 characters)</span><input type="password" id="pw-new" autocomplete="new-password" minlength="8" required></label>
+    <div class="row"><button class="btn" type="submit">Change password</button></div>
+  </form>
+  <section class="panel" ${LOCAL?'hidden':''}>
+    <h3>Clinics</h3>
+    ${memberships.length>1?`<label class="f"><span>Switch clinic</span><select id="switchClinic">${memberships.map(m=>`<option value="${m.clinic_id}" ${m.clinic_id===clinic.id?'selected':''}>${esc(m.clinics.name)}</option>`).join('')}</select></label>`:''}
+    <div class="row"><button class="btn small" data-act="onboard">Create or join another clinic</button>
+    ${view.confirm==='leave'?`<button class="btn small" data-act="cancelConfirm">Stay</button><button class="btn small danger" data-act="leave">Yes, leave ${esc(clinic.name)}</button>`:`<button class="btn small danger" data-act="askLeave">Leave this clinic</button>`}</div>
+  </section>
+  `;
+}
+function myAccountView(){
+  return `
+  <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button>${syncBadge()}</header>
+  <h1>My account</h1>
+  <p class="small muted" style="margin:-6px 0 12px">App version: <b>${APP_VERSION}</b></p>
+  ${msgHtml()}
+${soundsPanel()}
+  ${isAcct()?attendancePanel():''}
+  ${acctPanelsHtml()}
+  ${aboutPanel()}`;
+}
 function settingsView(){
   const admin=isAdmin();const oldLocal=lsGet('clinicRecords.v1');
+  if(!admin)return myAccountView();
   return `
   <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button>${syncBadge()}</header>
   <h1>Clinic & account</h1>
@@ -2230,24 +2265,7 @@ ${activationPanel(admin)}
       </span>`:''}
     </div>`}).join('')}</div>
   </section>
-  <form class="panel" id="meForm">
-    <h3>Your account</h3>
-    <p class="small muted" style="margin:0">Logged in as ${LOCAL?'username ':''}${esc(user.email)}</p>
-    <div class="grid2"><label class="f"><span>Your name on records in this clinic</span><input type="text" id="me-name" value="${esc(me.name)}" required></label>
-    <label class="f"><span>PMDC registration no.</span><input type="text" id="me-pmdc" value="${esc(me.pmdc||'')}" placeholder="e.g. 12345-D"></label></div>
-    <div class="row"><button class="btn" type="submit">Save my details</button></div>
-  </form>
-  <form class="panel" id="pwForm">
-    <h3>Change password</h3>
-    <label class="f"><span>New password (at least 8 characters)</span><input type="password" id="pw-new" autocomplete="new-password" minlength="8" required></label>
-    <div class="row"><button class="btn" type="submit">Change password</button></div>
-  </form>
-  <section class="panel" ${LOCAL?'hidden':''}>
-    <h3>Clinics</h3>
-    ${memberships.length>1?`<label class="f"><span>Switch clinic</span><select id="switchClinic">${memberships.map(m=>`<option value="${m.clinic_id}" ${m.clinic_id===clinic.id?'selected':''}>${esc(m.clinics.name)}</option>`).join('')}</select></label>`:''}
-    <div class="row"><button class="btn small" data-act="onboard">Create or join another clinic</button>
-    ${view.confirm==='leave'?`<button class="btn small" data-act="cancelConfirm">Stay</button><button class="btn small danger" data-act="leave">Yes, leave ${esc(clinic.name)}</button>`:`<button class="btn small danger" data-act="askLeave">Leave this clinic</button>`}</div>
-  </section>
+  ${acctPanelsHtml()}
   ${LOCAL?localBackupHtml(admin):''}
   <section class="panel" ${LOCAL?'hidden':''}>
     <h3>Backup</h3>
