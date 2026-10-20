@@ -1,7 +1,8 @@
 {
- "version": "20 Oct 2026 · Hospital registration",
+ "version": "20 Oct 2026 · Sign-up email checks",
  "date": "20 Oct 2026",
  "notes": [
+  "Sign-up: if an email is already registered the app now says so. After creating an account there is a “Send the confirmation email again” button, and clearer messages.",
   "Hospital registration now has its own pages: hospital look, “Register your dental hospital”, and a “Create your dental hospital” form where you choose the departments, pharmacy and laboratory. Dental clinic registration is unchanged.",
   "Fixed: on a phone the update message is now scrollable and its Update now / OK buttons always stay visible.",
   "Clinic & account / My account: a Log out button now sits under “All changes saved” at the top, so it is easy to find on a phone.",

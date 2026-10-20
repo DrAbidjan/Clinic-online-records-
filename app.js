@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · Hospital registration';
+const APP_VERSION='20 Oct 2026 · Sign-up email checks';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -2096,7 +2096,7 @@ function authView(){
     ${LOCAL?`<button class="linkbtn" type="button" data-act="showUsers">${view.showUsers?'Hide usernames':'Forgot your username?'}</button>
     ${view.showUsers?`<div class="summary">${window.__LOCAL_DB.usernames().map(u=>`<span><b>${esc(u.username)}</b>${u.name?' · '+esc(u.name):''}</span>`).join('')}</div>`:''}
     <p class="small muted" style="margin:0">Forgot your password? Your clinic admin can reset it in Clinic & account → Team.</p>
-    <button class="linkbtn" type="button" data-act="showRecover">${view.showRecover?'Hide':'Admin forgot password?'}</button>`:'<button class="linkbtn" type="button" data-act="forgot">Forgot password?</button>'}
+    <button class="linkbtn" type="button" data-act="showRecover">${view.showRecover?'Hide':'Admin forgot password?'}</button>`:`<button class="linkbtn" type="button" data-act="forgot">Forgot password?</button>${view.needConfirm?'<button class="linkbtn" type="button" data-act="resendConfirm">Did not get the email? Send the confirmation email again</button>':''}`}
   </form>
   ${LOCAL&&view.showRecover?`<form class="panel" id="recoverForm" novalidate><h3>Reset admin password</h3>
     <label class="f"><span>Admin username</span><input type="text" id="rv-user" autocapitalize="off" autocorrect="off" value="${esc(view.email||'')}" required></label>
@@ -3274,7 +3274,8 @@ document.addEventListener('submit',async e=>{
     if(f.id==='loginForm'){
       view.email=v('li-email');
       if(!v('li-email')||!$('#li-pw').value)throw new Error('Enter your email and password.');
-      const {data,error}=await sb.auth.signInWithPassword({email:v('li-email'),password:$('#li-pw').value});if(error)throw error;
+      const {data,error}=await sb.auth.signInWithPassword({email:v('li-email'),password:$('#li-pw').value});
+      if(error){if(/Email not confirmed/i.test(error.message||''))view.needConfirm=true;throw error}
       user=data.user;showWelcome=true;await afterLogin();return;
     }
     if(f.id==='signupForm'){
@@ -3282,7 +3283,9 @@ document.addEventListener('submit',async e=>{
       if($('#su-pw').value.length<8)throw new Error('Password must be at least 8 characters.');
       const {data,error}=await sb.auth.signUp({email:v('su-email'),password:$('#su-pw').value,options:{data:{full_name:v('su-name'),pmdc:v('su-pmdc')},emailRedirectTo:location.origin+location.pathname}});
       if(error)throw error;
-      if(!data.session){view.email=v('su-email');view.authTab='login';view.msg={t:'ok',m:'Account created. Check your email and tap the confirmation link, then log in.'};render();return}
+      /* Supabase hides whether an email is already registered: it returns a user with an empty identities list. */
+      if(data&&data.user&&Array.isArray(data.user.identities)&&data.user.identities.length===0){view.email=v('su-email');view.authTab='login';view.needConfirm=true;view.msg={t:'err',m:'This email is already registered. Log in with it instead. If you forgot the password, tap “Forgot password?”. If you never confirmed it, tap “Send the confirmation email again”.'};render();return}
+      if(!data.session){view.email=v('su-email');view.authTab='login';view.needConfirm=true;view.msg={t:'ok',m:'Account created. We sent a confirmation email to '+v('su-email')+'. Open it and tap the link (look in Spam / Junk too), then log in here.'};render();return}
       user=data.user;showWelcome=true;await afterLogin();return;
     }
     if(f.id==='newpwForm'){
@@ -3647,6 +3650,9 @@ document.addEventListener('click',async e=>{
       const pp=P();const fn=((pp?pp.last+'_'+pp.first+'_':'')+x.kind+'_'+x.taken_on+'.'+(x.path.split('.').pop())).replace(/[^\w.\-]+/g,'_');
       deliverFile(data,fn,'save').then(ok=>{if(ok)toast('X-ray ready to save')},()=>toast('Could not share the file'));break;}
     case 'logout':if(dirty.size)await flush();await endAttendance();await sb.auth.signOut();break;
+    case 'resendConfirm':{const em=($('#li-email')?$('#li-email').value.trim():'')||view.email||'';if(!em){view.msg={t:'err',m:'Type your email above first.'};render();break;}
+      view.email=em;const {error}=await sb.auth.resend({type:'signup',email:em,options:{emailRedirectTo:location.origin+location.pathname}});
+      view.msg=error?{t:'err',m:/rate|seconds|too many|limit/i.test(error.message||'')?'Too many emails were requested. Wait a few minutes and try again, or ask the app owner to check the email settings.':friendly(error)}:{t:'ok',m:'Sent again to '+em+'. Check your inbox and Spam / Junk. It can take a few minutes.'};render();break;}
     case 'forgot':{const em=$('#li-email')?$('#li-email').value.trim():'';if(!em){view.msg={t:'err',m:'Type your email above first, then tap “Forgot password?”.'};render();break;}
       const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
       view.msg=error?{t:'err',m:friendly(error)}:{t:'ok',m:'If that email has an account, a reset link is on its way. Open it on this device.'};render();break;}
