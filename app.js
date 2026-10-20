@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · open prescription as file';
+const APP_VERSION='20 Oct 2026 · new hospital opens its own form';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -650,6 +650,8 @@ async function afterLogin(prefer){
   if(error){view.screen='auth';view.msg={t:'err',m:friendly(error)};render();return}
   memberships=(data||[]).filter(m=>m.clinics);memberships.forEach(m=>normClinic(m.clinics));
   if(!memberships.length){view.screen='onboard';render();return}
+  if(wantNewFacility&&!prefer){wantNewFacility=false;try{history.replaceState(null,'',location.pathname)}catch(e){}view.screen='onboard';render();return}
+  wantNewFacility=false;
   const want=prefer||lsGet('clinicId');
   await openClinic(memberships.find(x=>x.clinic_id===want)||memberships[0]);
 }
@@ -2283,6 +2285,8 @@ function recoveryView(){
 let showWelcome=false;
 const URLQ=new URLSearchParams(location.search);
 let facilityPref=['dental_clinic','dental_hospital'].includes(URLQ.get('type'))?URLQ.get('type'):'dental_clinic';
+/* Someone already logged in who taps “Dental clinic / Dental hospital” on the welcome page wants to create a NEW one, not re-open the clinic they already have. */
+let wantNewFacility=!!(URLQ.get('signup')&&URLQ.get('type')&&!URLQ.get('staff'));
 if(URLQ.get('signup'))view.authTab='signup';
 function greeting(){const h=new Date().getHours();return h<12?'Good morning':h<17?'Good afternoon':'Good evening'}
 function welcomeView(){
@@ -3550,7 +3554,8 @@ document.addEventListener('click',async e=>{
     case 'forgot':{const em=$('#li-email')?$('#li-email').value.trim():'';if(!em){view.msg={t:'err',m:'Type your email above first, then tap “Forgot password?”.'};render();break;}
       const {error}=await sb.auth.resetPasswordForEmail(em,{redirectTo:location.origin+location.pathname});
       view.msg=error?{t:'err',m:friendly(error)}:{t:'ok',m:'If that email has an account, a reset link is on its way. Open it on this device.'};render();break;}
-    case 'back':if(view.screen==='patient'&&view.backTo==='appts'){view=Object.assign(view,{screen:'appts',pid:null,confirm:null});render();refreshAppts();break;}
+    case 'back':if(view.screen==='onboard'&&!clinic&&memberships.length){await openClinic(memberships.find(x=>x.clinic_id===lsGet('clinicId'))||memberships[0]);break}
+    if(view.screen==='patient'&&view.backTo==='appts'){view=Object.assign(view,{screen:'appts',pid:null,confirm:null});render();refreshAppts();break;}
       if(view.screen==='patient'&&(view.backTo==='aes'||isAes(P()))){view=Object.assign(view,{screen:'aes',pid:null,tab:'details',tooth:null,confirm:null,addItem:null,msg:null});render();break;}
       view=Object.assign(view,{screen:memberships.length?'list':'onboard',pid:null,tab:'details',tooth:null,confirm:null,addItem:null,msg:null});render();break;
     case 'settings':view.newRecovery=null;if(isAdmin()||isAcct()){attRows=null;loadAttendance(attDay||today()).then(()=>{if(view.screen==='settings')softRender()})}if(LOCAL){snapList=null;window.__LOCAL_DB.listSnapshots().then(l=>{snapList=l;if(view.screen==='settings')softRender()})}view.screen='settings';view.confirm=null;view.msg=null;render();loadTeam().then(()=>{if(view.screen==='settings')softRender()});if(appOwner)loadSignupCodes().then(()=>{if(view.screen==='settings')softRender()});break;
