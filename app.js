@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · Update box fits phone';
+const APP_VERSION='20 Oct 2026 · Hospital registration';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -133,9 +133,9 @@ const regShort=b=>{const m=String(b||'').match(/\(([^)]+)\)/);return m?m[1]:(b&&
 function regLine(c){c=c||clinic||{};return [c.reg_no?((regShort(c.reg_body)?regShort(c.reg_body)+' ':'')+'Reg. No. '+c.reg_no):'',c.ntn?'NTN '+c.ntn:''].filter(Boolean).join('  ·  ')}
 const pmdcOf=m=>m&&m.pmdc?'PMDC No. '+m.pmdc:'';
 const dentistLine=m=>m?(m.name+(m.pmdc?' ('+pmdcOf(m)+')':'')):'';
-function regFields(prefix,c,ro){c=c||{};return `<div class="grid2">
+function regFields(prefix,c,ro){c=c||{};const hh=prefix==='cc'&&typeof hospMode==='function'&&hospMode();return `<div class="grid2">
   <label class="f"><span>Registered with (healthcare commission)</span><select id="${prefix}-regbody" ${ro?'disabled':''}><option value="">—</option>${REG_BODIES.map(b=>`<option ${c.reg_body===b?'selected':''}>${b}</option>`).join('')}</select></label>
-  <label class="f"><span>Clinic registration / licence no.</span><input type="text" id="${prefix}-regno" value="${esc(c.reg_no||'')}" ${ro?'readonly':''}></label>
+  <label class="f"><span>${hh?'Hospital registration / licence no.':'Clinic registration / licence no.'}</span><input type="text" id="${prefix}-regno" value="${esc(c.reg_no||'')}" ${ro?'readonly':''}></label>
   <label class="f"><span>NTN (optional)</span><input type="text" id="${prefix}-ntn" value="${esc(c.ntn||'')}" ${ro?'readonly':''}></label></div>`}
 const INSURANCE=['','Self-pay','Sehat Card','Company / panel','Private insurance','Other'];
 
@@ -2075,14 +2075,19 @@ function icon(n){const p={
   return `<svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.7" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${p}</svg>`}
 const msgHtml=()=>view.msg?`<div class="msg ${view.msg.t}" role="alert">${esc(view.msg.m)}</div>`:'';
 const brand=()=>`<div class="brand"><svg viewBox="0 0 100 100" aria-hidden="true"><polygon points="4,4 96,4 68,32 32,32" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="5"/><polygon points="4,96 96,96 68,68 32,68" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="5"/><polygon points="4,4 32,32 32,68 4,96" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="5"/><polygon points="96,4 68,32 68,68 96,96" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="5"/><rect x="32" y="32" width="36" height="36" fill="var(--accent)"/></svg><div><b>Clinic Patient Records</b><span>Dental records for your clinic</span></div></div>`;
+const hospMode=()=>typeof facilityPref!=='undefined'&&facilityPref==='dental_hospital';
+const hospBrand=()=>`<div class="brand hospbrand"><svg viewBox="0 0 100 100" aria-hidden="true"><rect x="14" y="30" width="72" height="58" rx="4" fill="var(--accent-soft)" stroke="var(--accent)" stroke-width="5"/><rect x="36" y="8" width="28" height="22" rx="3" fill="var(--accent)"/><path d="M50 12v14M43 19h14" stroke="#fff" stroke-width="4" stroke-linecap="round"/><rect x="26" y="42" width="12" height="12" fill="var(--accent)"/><rect x="62" y="42" width="12" height="12" fill="var(--accent)"/><rect x="26" y="62" width="12" height="12" fill="var(--accent)"/><rect x="62" y="62" width="12" height="12" fill="var(--accent)"/><rect x="43" y="64" width="14" height="24" fill="var(--accent)"/></svg><div><b>Hospital Patient Records</b><span>Dental hospital: departments, pharmacy &amp; laboratory</span></div></div>`;
+const hospPerks=()=>`<div class="hospperks"><span>🏥 Departments</span><span>💊 Pharmacy</span><span>🧪 Laboratory</span><span>👥 Staff logins</span><span>📱 Patient portal</span></div>`;
 function configView(){return `<div class="auth">${brand()}<section class="panel"><h2>Almost ready</h2><p style="margin:0">This app is not connected to its database yet. Open <b>config.js</b> and paste your Supabase <b>Project URL</b> and <b>anon public key</b>, as shown in the setup guide.</p></section></div>`}
 function offlineView(){return `<div class="auth">${brand()}<section class="panel"><h2>Can't connect</h2><p style="margin:0">The app could not load. Check your internet connection, then reload the page.</p><div class="row"><button class="btn primary" data-act="reload">Reload</button></div></section></div>`}
 function loadingView(){return `<div class="auth">${brand()}<p class="muted" style="text-align:center">Loading…</p></div>`}
 function errorView(){return `<div class="auth">${brand()}${msgHtml()}<div class="row"><button class="btn primary" data-act="reload">Try again</button><button class="btn" data-act="logout">Log out</button></div></div>`}
 function authView(){
   const t=LOCAL?(window.__LOCAL_DB.userCount()===0?'signup':'login'):view.authTab;
-  return `<div class="auth">${brand()}
-  ${LOCAL?'':`<div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="${t==='login'}" data-authtab="login">Log in</button><button class="tab" role="tab" aria-selected="${t==='signup'}" data-authtab="signup">${LOCAL?'First-time setup':'Create account'}</button></div>`}
+  const H=hospMode();
+  return `<div class="auth ${H?'hospauth':''}">${H?hospBrand():brand()}
+  ${H&&t==='signup'?`<section class="panel hosphead"><h2>Register your dental hospital</h2><p class="small muted" style="margin:0">Create the administrator account first. Next you set up the hospital with its departments, pharmacy and laboratory.</p>${hospPerks()}</section>`:''}
+  ${LOCAL?'':`<div class="tabs" role="tablist"><button class="tab" role="tab" aria-selected="${t==='login'}" data-authtab="login">Log in</button><button class="tab" role="tab" aria-selected="${t==='signup'}" data-authtab="signup">${LOCAL?'First-time setup':H?'Register hospital':'Create account'}</button></div>`}
   ${msgHtml()}
   ${t==='login'?`<form class="panel" id="loginForm" novalidate>
     <label class="f"><span>${LOCAL?'Username':'Email'}</span><input type="${LOCAL?'text':'email'}" id="li-email" autocomplete="username" autocapitalize="off" autocorrect="off" ${LOCAL?'':'inputmode="email"'} value="${esc(view.email||'')}" required></label>
@@ -2098,12 +2103,12 @@ function authView(){
     <label class="f"><span>Recovery code</span><input type="text" id="rv-code" class="codein" autocapitalize="characters" autocomplete="off" placeholder="XXXX-XXXX-XXXX" value="${esc(view.rvCode||'')}" required></label>
     <label class="f"><span>New password (at least 8 characters)</span><input type="password" id="rv-pw" autocomplete="new-password" minlength="8" required></label>
     <button class="btn primary" type="submit">Set new password</button></form>`:''}`:`<form class="panel" id="signupForm" novalidate>
-    <label class="f"><span>Your name (as shown on records)</span><input type="text" id="su-name" placeholder="e.g. Dr Ayesha Khan" autocomplete="name" required></label>
+    <label class="f"><span>${H?'Administrator name (hospital owner / director)':'Your name (as shown on records)'}</span><input type="text" id="su-name" placeholder="e.g. Dr Ayesha Khan" autocomplete="name" required></label>
     <label class="f"><span>PMDC registration no. (dentists)</span><input type="text" id="su-pmdc" placeholder="e.g. 12345-D" autocomplete="off"></label>
     <label class="f"><span>${LOCAL?'Choose a username (for logging in)':'Email'}</span><input type="${LOCAL?'text':'email'}" id="su-email" autocomplete="username" autocapitalize="off" autocorrect="off" ${LOCAL?'placeholder="e.g. ayesha"':'inputmode="email"'} required></label>
     <label class="f"><span>Password (at least 8 characters)</span><input type="password" id="su-pw" autocomplete="new-password" minlength="8" required></label>
-    <button class="btn primary" type="submit">${LOCAL?'Continue':'Create account'}</button>
-    <p class="small muted" style="margin:0">${LOCAL?'You become the clinic admin. Next you enter your clinic name, then you can add other dentists.':'After this you can create your clinic, or join one with an invite code from your clinic admin.'}</p>
+    <button class="btn primary" type="submit">${LOCAL?'Continue':H?'Create hospital account':'Create account'}</button>
+    <p class="small muted" style="margin:0">${LOCAL?(H?'You become the hospital administrator. Next you enter the hospital name and choose its departments.':'You become the clinic admin. Next you enter your clinic name, then you can add other dentists.'):(H?'After this you create your hospital and choose its departments, pharmacy and laboratory. You need a creation code from ClinicRecords.pk.':'After this you can create your clinic, or join one with an invite code from your clinic admin.')}</p>
   </form>
   ${LOCAL?`<section class="panel"><h3>Moving from another phone?</h3>
     <label class="f"><span>Restore a full backup file instead</span><input type="file" id="restoreFile" accept=".json,application/json"></label>
@@ -2117,18 +2122,21 @@ function newpwView(){return `<div class="auth">${brand()}${msgHtml()}<form class
 function onboardView(){
   const nm=(user&&user.user_metadata&&user.user_metadata.full_name)||'';
   const pm=(user&&user.user_metadata&&user.user_metadata.pmdc)||'';
-  return `<div class="auth">${brand()}${msgHtml()}
-  <form class="panel" id="createForm"><h2>Create your clinic</h2>
-    <p class="small muted" style="margin:0">${LOCAL?'You become the clinic admin and can add dentists with their own logins.':'You become the clinic admin and get an invite code for your dentists.'}</p>
-    <label class="f"><span>What are you registering?</span><select id="cc-fac"><option value="dental_clinic" ${facilityPref==='dental_clinic'?'selected':''}>Dental clinic</option><option value="dental_hospital" ${facilityPref==='dental_hospital'?'selected':''}>Dental hospital (departments)</option><option disabled>Medical clinic – coming soon</option><option disabled>Medical hospital – coming soon</option></select></label>
-    ${LOCAL?'':'<label class="f"><span>Clinic creation code (from the app owner)</span><input type="text" id="cc-code" class="codein" autocapitalize="characters" autocomplete="off" required></label><p class="small muted" style="margin:0">Only clinics approved by the app owner can be created. If you work for a clinic that already uses the app, do not create a new one: ask your clinic admin to invite your email, then log in again.</p>'}
-    <label class="f"><span>Clinic or hospital name</span><input type="text" id="cc-name" placeholder="e.g. Smile Dental Clinic" required></label>
+  const H=hospMode();
+  return `<div class="auth ${H?'hospauth':''}">${H?hospBrand():brand()}${msgHtml()}
+  <form class="panel" id="createForm"><h2>${H?'Create your dental hospital':'Create your clinic'}</h2>${H?hospPerks():''}
+    <p class="small muted" style="margin:0">${H?(LOCAL?'You become the hospital administrator and can add dentists, pharmacy and lab staff with their own logins.':'You become the hospital administrator. Doctors, pharmacy and lab staff are invited by email later (Earnings → Staff &amp; salaries).'):LOCAL?'You become the clinic admin and can add dentists with their own logins.':'You become the clinic admin and get an invite code for your dentists.'}</p>
+    <label class="f" ${H?'hidden':''}><span>What are you registering?</span><select id="cc-fac"><option value="dental_clinic" ${facilityPref==='dental_clinic'?'selected':''}>Dental clinic</option><option value="dental_hospital" ${facilityPref==='dental_hospital'?'selected':''}>Dental hospital (departments)</option><option disabled>Medical clinic – coming soon</option><option disabled>Medical hospital – coming soon</option></select></label>
+    ${LOCAL?'':'<label class="f"><span>'+(H?'Hospital creation code (from ClinicRecords.pk)':'Clinic creation code (from the app owner)')+'</span><input type="text" id="cc-code" class="codein" autocapitalize="characters" autocomplete="off" required></label><p class="small muted" style="margin:0">Only clinics approved by the app owner can be created. If you work for a clinic that already uses the app, do not create a new one: ask your clinic admin to invite your email, then log in again.</p>'}
+    <label class="f"><span>${H?'Hospital name':'Clinic or hospital name'}</span><input type="text" id="cc-name" placeholder="${H?'e.g. City Dental Hospital':'e.g. Smile Dental Clinic'}" required></label>
     <label class="f"><span>Address</span><input type="text" id="cc-address" placeholder="Street, city"></label>
     <label class="f"><span>Phone</span><input type="tel" id="cc-phone"></label>
     ${regFields('cc')}
-    <div class="grid2"><label class="f"><span>Your name on records</span><input type="text" id="cc-me" value="${esc(nm)}" required></label>
+    ${H?`<div class="f"><span>Departments of your hospital (untick what you do not have)</span><div class="deptpick">${DENTAL_DEPTS.map(d=>`<label class="row small" style="gap:8px;align-items:center"><input type="checkbox" data-cdept="${esc(d)}" checked style="width:20px;height:20px"> ${esc(d)}</label>`).join('')}</div></div>
+    <div class="f"><span>Also set up</span><label class="row small" style="gap:8px;align-items:center"><input type="checkbox" id="cc-pharm" checked style="width:20px;height:20px"> Pharmacy (prescriptions go to the pharmacy list)</label><label class="row small" style="gap:8px;align-items:center"><input type="checkbox" id="cc-lab" checked style="width:20px;height:20px"> Laboratory (lab requests and delivery notices)</label></div>`:''}
+    <div class="grid2"><label class="f"><span>${H?'Administrator name on records':'Your name on records'}</span><input type="text" id="cc-me" value="${esc(nm)}" required></label>
     <label class="f"><span>Your PMDC registration no.</span><input type="text" id="cc-pmdc" value="${esc(pm)}" placeholder="e.g. 12345-D"></label></div>
-    <button class="btn primary" type="submit">Create clinic</button>
+    <button class="btn primary" type="submit">${H?'Create hospital':'Create clinic'}</button>
   </form>
   <div class="or" ${LOCAL?'hidden':''}><span>or</span></div>
   <form class="panel" id="joinForm" ${LOCAL?'hidden':''}><h2>Join a clinic</h2>
@@ -3289,8 +3297,9 @@ document.addEventListener('submit',async e=>{
       if(v('cc-pmdc'))await sb.rpc('set_my_pmdc',{p_clinic:data,p_pmdc:v('cc-pmdc')});
       let rc=null;if(LOCAL){const r=await sb.rpc('new_recovery_code',{p_clinic:data});rc=r.data}
       const fac=($('#cc-fac')||{}).value||'dental_clinic';
+      const hOpt={ds:[...document.querySelectorAll('[data-cdept]')].filter(x=>x.checked).map(x=>x.dataset.cdept),ph:$('#cc-pharm')?$('#cc-pharm').checked:true,lb:$('#cc-lab')?$('#cc-lab').checked:true};
       showWelcome=!rc;await afterLogin(data);
-      try{await saveBranding(fac==='dental_hospital'?Object.assign({facility:fac,depts:DENTAL_DEPTS.slice()},hospUnits()):{facility:fac})}catch(e2){}if(rc){view.recoveryCode=rc;view.screen='recovery';render()}else toast('Clinic created');return;
+      try{if(fac==='dental_hospital'){const hu=hospUnits();hu.units.pharmacy=hOpt.ph;hu.units.lab=hOpt.lb;await saveBranding(Object.assign({facility:fac,depts:(hOpt.ds.length?hOpt.ds:DENTAL_DEPTS.slice())},hu))}else await saveBranding({facility:fac})}catch(e2){}if(rc){view.recoveryCode=rc;view.screen='recovery';render()}else toast(fac==='dental_hospital'?'Hospital created':'Clinic created');return;
     }
     if(f.id==='joinForm'){
       if(!v('jc-code'))throw new Error('Enter the invite code.');
