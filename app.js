@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · Earnings & My account roles';
+const APP_VERSION='20 Oct 2026 · App update button';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -492,8 +492,17 @@ document.addEventListener('pointerdown',e=>{const el=e.target.closest('button,.b
 document.addEventListener('toggle',e=>{if(e.target&&e.target.classList&&e.target.classList.contains('bkhist'))view.bkHistOpen=e.target.open},true);
 /* ---- Update notice: version.json (uploaded with each update) tells every open computer that a new version is ready ---- */
 const Upd={info:null,shown:false,
-  async check(){try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)return;const j=await r.json();if(!j||!j.version)return;Upd.info=j;
-    if(j.version!==APP_VERSION)Upd.bar();else Upd.whatsNew()}catch(e){}},
+  status:'',
+  async check(manual){if(manual){Upd.status='checking';if(view.screen==='settings')softRender()}
+    try{const r=await fetch('version.json?t='+Date.now(),{cache:'no-store'});if(!r.ok)throw new Error('x');const j=await r.json();if(!j||!j.version)throw new Error('x');Upd.info=j;Upd.checkedAt=Date.now();
+      Upd.status=j.version!==APP_VERSION?'available':'uptodate';
+      if(j.version!==APP_VERSION){if(!manual)Upd.bar()}else Upd.whatsNew()}catch(e){if(manual)Upd.status='error'}
+    if(manual&&view.screen==='settings')softRender()},
+  async go(){if(typeof dirty!=='undefined'&&dirty.size){try{await flush()}catch(err){}}
+    try{const rs=await navigator.serviceWorker?.getRegistrations?.();if(rs)await Promise.all(rs.map(r=>r.update().catch(()=>{})))}catch(err){}
+    try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(err){}
+    try{await Promise.all(['app.js','index.html','config.js','local-db.js'].map(f=>fetch(f+'?r='+Date.now(),{cache:'reload'}).catch(()=>{})));await Promise.all(['app.js','index.html'].map(f=>fetch(f,{cache:'reload'}).catch(()=>{})))}catch(err){}
+    location.reload()},
   notes(){const n=(Upd.info&&Upd.info.notes)||[];return n.length?'<ul>'+n.map(x=>'<li>'+esc(x)+'</li>').join('')+'</ul>':''},
   bar(){if(Upd.shown)return;Upd.shown=true;const d=document.createElement('div');d.className='updbar';d.setAttribute('role','status');
     d.innerHTML=`<div class="updtxt"><b>A new version of the app is ready</b><span>${esc(Upd.info.date||'')} – your work is saved automatically. Just tap Update now.</span></div>
@@ -502,11 +511,7 @@ const Upd={info:null,shown:false,
     d.addEventListener('click',async e=>{const b=e.target.closest('[data-upd]');if(!b)return;const k=b.dataset.upd;
       if(k==='notes'){const n=d.querySelector('.updnotes');n.hidden=!n.hidden;return}
       if(k==='later'){d.remove();Upd.shown=false;Upd.snooze=Date.now();return}
-      if(k==='go'){if(typeof dirty!=='undefined'&&dirty.size){try{await flush()}catch(err){}}
-        try{const rs=await navigator.serviceWorker?.getRegistrations?.();if(rs)await Promise.all(rs.map(r=>r.update().catch(()=>{})))}catch(err){}
-        try{if(window.caches){const ks=await caches.keys();await Promise.all(ks.map(k=>caches.delete(k)))}}catch(err){}
-        try{await Promise.all(['app.js','index.html','config.js','local-db.js'].map(f=>fetch(f+'?r='+Date.now(),{cache:'reload'}).catch(()=>{})));await Promise.all(['app.js','index.html'].map(f=>fetch(f,{cache:'reload'}).catch(()=>{})))}catch(err){}
-        location.reload()}})},
+      if(k==='go'){await Upd.go()}})},
   whatsNew(){let seen='';try{seen=localStorage.getItem('seenVersion')||''}catch(e){}
     if(seen===APP_VERSION)return;try{localStorage.setItem('seenVersion',APP_VERSION)}catch(e){}
     if(!seen||!Upd.notes())return; // first use: no pop-up
@@ -2183,6 +2188,18 @@ function aboutPanel(){
       <p style="margin:0" class="muted">FDI tooth numbering, BPE codes and dental terms are public clinical standards. All drawings in the app were made for this app.</p>
     </div></details></section>`;
 }
+function updatePanel(){
+  const st=Upd.status;const when=Upd.checkedAt?new Date(Upd.checkedAt).toLocaleTimeString('en-GB',{hour:'2-digit',minute:'2-digit'}):'';
+  const msg=st==='checking'?'Checking…':st==='available'?`<b>A new version is ready:</b> ${esc((Upd.info&&Upd.info.version)||'')}`:st==='uptodate'?`✓ You have the newest version${when?' (checked '+when+')':''}.`:st==='error'?'Could not check. Make sure you are online and try again.':'Tap “Check for updates” to see if a newer version is available.';
+  return `<section class="panel" id="updatePanel">
+    <h3>App update</h3>
+    <p class="small" style="margin:0">Your version: <b>${esc(APP_VERSION)}</b></p>
+    <p class="small ${st==='available'?'':'muted'}" style="margin:0" role="status">${msg}</p>
+    ${st==='available'&&Upd.notes()?`<div class="small updnotes" style="margin:0">${Upd.notes()}</div>`:''}
+    <div class="row"><button class="btn ${st==='available'?'':'primary'}" data-act="updCheck" ${st==='checking'?'disabled':''}>Check for updates</button>${st==='available'?'<button class="btn primary" data-act="updGo">Update now</button>':''}</div>
+    <p class="small muted" style="margin:0">Updating saves your work first and then reloads the app. Your records stay as they are.</p>
+  </section>`;
+}
 function acctPanelsHtml(){
   return `
   <form class="panel" id="meForm">
@@ -2211,6 +2228,7 @@ function myAccountView(){
   <h1>My account</h1>
   <p class="small muted" style="margin:-6px 0 12px">App version: <b>${APP_VERSION}</b></p>
   ${msgHtml()}
+${updatePanel()}
 ${soundsPanel()}
   ${isAcct()?attendancePanel():''}
   ${acctPanelsHtml()}
@@ -2224,6 +2242,7 @@ function settingsView(){
   <h1>Clinic & account</h1>
   <p class="small muted" style="margin:-6px 0 12px">App version: <b>${APP_VERSION}</b></p>
   ${msgHtml()}
+${updatePanel()}
 ${brandingPanel()}
 ${soundsPanel()}
 ${deptPanel()}
@@ -3660,6 +3679,8 @@ document.addEventListener('click',async e=>{
       if(f.doneDate){it.doneDate=f.doneDate;it.doneBy=f.doneBy}
       const dn=$('#it-done')&&$('#it-done').value;if(dn){it.status='completed';it.doneDate=dn;it.doneBy=it.doneBy||me.name}
       const ix=p.plan.findIndex(x=>x.id===it.id);if(ix>=0)p.plan[ix]=it;else p.plan.push(it);view.addItem=null;save();render();toast('Item saved');break;}
+    case 'updCheck':Upd.check(true);break;
+    case 'updGo':toast('Updating…');await Upd.go();break;
     case 'visitNew':{if(isAcct())break;const dt=d.date||today();if(view.tab!=='visits'){payList=[];view.tab='visits';loadPayments(p.id).then(()=>{if(view.tab==='visits')softRender()},()=>{})}view.visitEdit={id:'',date:dt};render();const f=$('#visitForm');if(f)f.scrollIntoView({block:'start'});break;}
     case 'visitEdit':{if(isAcct())break;const n=(p.notes||[]).find(x=>x.id===d.nid);if(!n)break;view.visitEdit={id:n.id,date:n.date};render();const f=$('#visitForm');if(f)f.scrollIntoView({block:'start'});break;}
     case 'visitCancel':view.visitEdit=null;render();break;

@@ -1,7 +1,8 @@
 {
- "version": "20 Oct 2026 · Earnings & My account roles",
+ "version": "20 Oct 2026 · App update button",
  "date": "20 Oct 2026",
  "notes": [
+  "Settings / My account: new “App update” box with “Check for updates” and “Update now”, so you can update the app yourself whenever a new version is available.",
   "Accountant can now open Earnings with their own PIN (income, expenses, reports; staff and salaries are view only). Run supabase-update-accountant.sql once for the online version.",
   "Only the owner (admin) sees Clinic & account. Dentists and the accountant get a small “My account” page: name, password, sound.",
   "New Visits tab: one card per visit date with the treatment done, prescription, payment and note. Tap Edit to change a note (date, type, text, treatments done). The Details page shows the Last visit at the top with “+ Note for today”.",
