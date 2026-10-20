@@ -7,7 +7,7 @@
 const CONFIG=window.CLINIC_CONFIG||{SUPABASE_URL:'',SUPABASE_ANON_KEY:''};
 const LOCAL=!!window.__LOCAL_DB;
 /* Seller details shown on the Activation screen. Fill these in (keep the quote marks). */
-const APP_VERSION='20 Oct 2026 · App update button';
+const APP_VERSION='20 Oct 2026 · Log out in Account';
 const SELLER={name:'',whatsapp:'03113124533',price:'Rs 25,000'};
 
 const $=s=>document.querySelector(s);
@@ -2224,7 +2224,7 @@ function acctPanelsHtml(){
 }
 function myAccountView(){
   return `
-  <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button>${syncBadge()}</header>
+  <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button><span class="hdr-right">${syncBadge()}<button class="btn small" data-act="logout">Log out</button></span></header>
   <h1>My account</h1>
   <p class="small muted" style="margin:-6px 0 12px">App version: <b>${APP_VERSION}</b></p>
   ${msgHtml()}
@@ -2238,7 +2238,7 @@ function settingsView(){
   const admin=isAdmin();const oldLocal=lsGet('clinicRecords.v1');
   if(!admin)return myAccountView();
   return `
-  <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button>${syncBadge()}</header>
+  <header class="top desk-hide"><button class="btn small" data-act="back">← Patients</button><span class="hdr-right">${syncBadge()}<button class="btn small" data-act="logout">Log out</button></span></header>
   <h1>Clinic & account</h1>
   <p class="small muted" style="margin:-6px 0 12px">App version: <b>${APP_VERSION}</b></p>
   ${msgHtml()}

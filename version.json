@@ -1,7 +1,8 @@
 {
- "version": "20 Oct 2026 · App update button",
+ "version": "20 Oct 2026 · Log out in Account",
  "date": "20 Oct 2026",
  "notes": [
+  "Clinic & account / My account: a Log out button now sits under “All changes saved” at the top, so it is easy to find on a phone.",
   "Settings / My account: new “App update” box with “Check for updates” and “Update now”, so you can update the app yourself whenever a new version is available.",
   "Accountant can now open Earnings with their own PIN (income, expenses, reports; staff and salaries are view only). Run supabase-update-accountant.sql once for the online version.",
   "Only the owner (admin) sees Clinic & account. Dentists and the accountant get a small “My account” page: name, password, sound.",
